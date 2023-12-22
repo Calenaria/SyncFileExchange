@@ -1,6 +1,4 @@
-using System.IO;
-using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Windows.Forms;
 
 namespace SyncFileExchange
 {
@@ -12,31 +10,17 @@ namespace SyncFileExchange
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
+            Console.WriteLine("START");
             ApplicationConfiguration.Initialize();
 
-            LoadConfig();
-
-            Application.Run(new MainFrame());
-        }
-
-        private static void LoadConfig()
-        {
-            string path = @"settings.conf";
-
-            if (!File.Exists(path))
+            using (var authFrame = new AuthFrame())
             {
-                var config = new Dictionary<string, string>{
-                    { "lastSyncTime", "0" } 
-                };
-
-                string settings = JsonConvert.SerializeObject(config);
-
-                File.WriteAllText(path, settings);
-            } else {
-                File.ead
+                if (authFrame.ShowDialog() == DialogResult.OK)
+                {
+                    Application.Run(new MainFrame());
+                }
             }
         }
+
     }
 }
