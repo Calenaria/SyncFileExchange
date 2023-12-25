@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace SyncFileExchange.Client
@@ -8,12 +9,23 @@ namespace SyncFileExchange.Client
     {
         // private readonly string SERVER_URL = "https://sfe.calenaria.com/api/v1/";
         private readonly string SERVER_URL = "http://127.0.0.1:8001/api/v1/";
-        private readonly HttpClient client;
+        private readonly HttpClient Client;
+        private string AccountToken;
 
-        public SFEClient() {
-            client = new HttpClient();
-            //test connection
-            //TestConnection().Wait();
+        public SFEClient(string accountToken = null) {
+            AccountToken = accountToken;
+            Client = new HttpClient();
+            if (AccountToken != null)
+            {
+                Client.DefaultRequestHeaders.Add("token", AccountToken);
+            }
+        }
+
+        public void setToken(string token)
+        {
+            AccountToken = token;
+            Client.DefaultRequestHeaders.Remove("token");
+            Client.DefaultRequestHeaders.Add("token", AccountToken);
         }
 
         public async Task<string> registerAccount(string email, string password)
@@ -26,7 +38,7 @@ namespace SyncFileExchange.Client
 
             var jsonContent = new StringContent(JsonConvert.SerializeObject(jsonData), Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync(SERVER_URL + "account/register", jsonContent);
+            var response = await Client.PostAsync(SERVER_URL + "account/register", jsonContent);
 
             Debug.WriteLine(response.StatusCode);
 
@@ -50,11 +62,15 @@ namespace SyncFileExchange.Client
 
             var jsonContent = new StringContent(JsonConvert.SerializeObject(jsonData), Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync(SERVER_URL + "account/login", jsonContent);
+            var response = await Client.PostAsync(SERVER_URL + "account/login", jsonContent);
 
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadAsStringAsync();
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var responseObject = JsonConvert.DeserializeObject<dynamic>(responseContent);
+                var token = responseObject.token;
+                setToken(token);
+                return responseContent;
             }
             else
             {
@@ -66,7 +82,7 @@ namespace SyncFileExchange.Client
         public async Task<string> retrieveLastFile()
         {
             //get last file for user saved on server
-            var response = await client.GetAsync(SERVER_URL + "lastfile");
+            var response = await Client.GetAsync(SERVER_URL + "lastfile");
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadAsStringAsync();
@@ -77,13 +93,20 @@ namespace SyncFileExchange.Client
             }
         }
 
-        private async Task TestConnection()
+        public async Task UploadFile(string filePath)
         {
-            var response = await client.GetAsync(SERVER_URL);
-            Console.WriteLine(response);
+            var fileBytes = await File.ReadAllBytesAsync(filePath);
+            var fileName = Path.GetFileName(filePath);
+
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(fileBytes);
+            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/form-data");
+            content.Add(fileContent, "file", fileName);
+
+            var response = await Client.PostAsync(SERVER_URL + "file/upload", content);
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpRequestException($"Connection test failed with status code: {response.StatusCode}");
+                throw new HttpRequestException($"File upload failed with status code: {response.StatusCode}");
             }
         }
     }

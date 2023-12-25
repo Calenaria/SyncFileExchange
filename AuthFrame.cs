@@ -24,6 +24,8 @@ namespace SyncFileExchange
             InitializeComponent();
         }
 
+        public string AccountToken { get; private set; }
+
         private void login_btn_Click(object sender, EventArgs e)
         {
             Debug.WriteLine("Logging in...");
@@ -55,6 +57,12 @@ namespace SyncFileExchange
         private void passwordLogin_tb_TextChanged(object sender, EventArgs e)
         {
             input_password = passwordLogin_tb.Text;
+        }
+
+        private void OnAuthenticationSuccess(string accountToken)
+        {
+            AccountToken = accountToken;
+            DialogResult = DialogResult.OK;
         }
     }
 }

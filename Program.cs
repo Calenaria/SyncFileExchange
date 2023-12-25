@@ -10,14 +10,14 @@ namespace SyncFileExchange
         [STAThread]
         static void Main()
         {
-            Console.WriteLine("START");
             ApplicationConfiguration.Initialize();
 
             using (var authFrame = new AuthFrame())
             {
                 if (authFrame.ShowDialog() == DialogResult.OK)
                 {
-                    Application.Run(new MainFrame());
+                    var accountToken = authFrame.AccountToken;
+                    Application.Run(new MainFrame(accountToken));
                 }
             }
         }
